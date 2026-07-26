@@ -1,0 +1,3 @@
+GET http://localhost:5173/v/e744ca5db55b71251aba0fca93357a99
+
+POST http://localhost:3000/api/v1/receipts/e744ca5db55b71251aba0fca93357a99/feedback

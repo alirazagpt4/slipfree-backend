@@ -3,7 +3,7 @@ import { Invoice, InvoiceItem } from '../models/associations.model.js';
 import { generateReceiptHash } from '../utils/hash.js';
 
 function buildReceiptUrl(hash) {
-    const base = process.env.RECEIPT_BASE_URL || 'http://localhost:3000/v';
+    const base = process.env.RECEIPT_BASE_URL;
     return `${base}/${hash}`;
 }
 
