@@ -68,7 +68,7 @@ async function getPrismAuthSession() {
 }
 
 
-let lastSyncTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+// let lastSyncTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
 async function fetchNewSalesFromRetailPro() {
     try {
@@ -88,9 +88,8 @@ async function fetchNewSalesFromRetailPro() {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
         };
 
-        const queryCols = 'sid,document_number,store_number,created_datetime,is_held,has_sale,has_return,bt_first_name,bt_last_name,bt_primary_phone_no,sale_subtotal,total_discount_amt,sale_total_tax_amt,transaction_total_amt,items';
-        // Filter hata diya — sirf sorting aur reasonable page_size rakhi
-        const targetUrl = `${RP_BASE_URL}/v1/rest/document?cols=${queryCols}&filter=post_date,gt,${lastSyncTime}&page_no=1&page_size=50`;
+        // Added API-level sorting: sort=created_datetime,desc
+        const targetUrl = `${RP_BASE_URL}/v1/rest/document?cols=*&sort=created_datetime,desc&page_no=1&page_size=50`;
 
         let response = await fetch(targetUrl, { headers });
 
@@ -107,24 +106,20 @@ async function fetchNewSalesFromRetailPro() {
         }
 
         const documents = await response.json();
-        console.log("📄 All fetched docs from Prism:", documents.map(d => ({ no: d.document_number, held: d.is_held, sale: d.has_sale })));
-
-        lastSyncTime = new Date().toISOString();
 
         if (!Array.isArray(documents)) return [];
 
-
-        documents.sort((a, b) => new Date(b.created_datetime) - new Date(a.created_datetime));
-
-        const completedSales = documents.filter(
-            doc => doc.is_held === false &&
+        // Store 3 & completed sales filter
+        const completedSales = documents.filter(doc => {
+            const isStore3 = String(doc.store_number) === '3';
+            return isStore3 &&
+                doc.is_held === false &&
                 doc.has_sale === true &&
                 doc.has_return === false &&
                 doc.document_number !== 0 &&
-                doc.document_number != null
-        );
+                doc.document_number != null;
+        });
 
-        console.log(`✅ ${completedSales.length} completed sale(s) mili is cycle mein.`);
         const fullSales = await Promise.all(
             completedSales.map(async (doc) => {
                 if (!doc.items || !Array.isArray(doc.items)) {
