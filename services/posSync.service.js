@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import 'dotenv/config';
+
 
 const RP_BASE_URL = process.env.RETAIL_PRO_URL || 'http://logo-rp';
 const RP_USER = process.env.RETAIL_PRO_USER;
@@ -90,7 +90,7 @@ async function fetchNewSalesFromRetailPro() {
 
         const queryCols = 'sid,document_number,store_number,created_datetime,is_held,has_sale,has_return,bt_first_name,bt_last_name,bt_primary_phone_no,sale_subtotal,total_discount_amt,sale_total_tax_amt,transaction_total_amt,items';
         // Filter hata diya — sirf sorting aur reasonable page_size rakhi
-        const targetUrl = `${RP_BASE_URL}/v1/rest/document?cols=${queryCols}&page_no=1&page_size=100`;
+        const targetUrl = `${RP_BASE_URL}/v1/rest/document?cols=${queryCols}&filter=post_date,gt,${lastSyncTime}&page_no=1&page_size=50`;
 
         let response = await fetch(targetUrl, { headers });
 
@@ -108,6 +108,9 @@ async function fetchNewSalesFromRetailPro() {
 
         const documents = await response.json();
         console.log("📄 All fetched docs from Prism:", documents.map(d => ({ no: d.document_number, held: d.is_held, sale: d.has_sale })));
+
+        lastSyncTime = new Date().toISOString();
+
         if (!Array.isArray(documents)) return [];
 
 
