@@ -3,3 +3,8 @@ node_modules/
 dist/
 build/
 .DS_Store
+testQuery.js
+testOracle.js
+testConnection.js
+test.js
+test-sync.js

@@ -1,180 +1,186 @@
 import 'dotenv/config';
+import oracledb from 'oracledb';
 
+oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
-const RP_BASE_URL = process.env.RETAIL_PRO_URL || 'http://logo-rp';
-const RP_USER = process.env.RETAIL_PRO_USER;
-const RP_PASS = process.env.RETAIL_PRO_PASS;
+const oracleConfig = {
+    user: process.env.ORA_USER || 'reportuser',
+    password: process.env.ORA_PASS || 'report',
+    connectString: `${process.env.ORA_HOST || '80.65.211.5'}:${process.env.ORA_PORT || '1521'}/${process.env.ORA_SERVICE_NAME || 'RPROODS.prism'}`
+};
 
-let activeAuthSession = null;
+// Safety Helper: Converts null, undefined, or invalid numbers safely to 0
+const safeNum = (val) => {
+    const parsed = parseFloat(val);
+    return Number.isNaN(parsed) ? 0 : parsed;
+};
 
-async function getPrismAuthSession() {
+const MAIN_SALES_QUERY = `
+SELECT * FROM (
+    SELECT 
+        t.Shop as "Shop Name", 
+        t.datetime as "Date Time", 
+        t.Receipt as "Receipt No",
+        t.Customer_Name as "Customer Name",
+        t.Mobile_no as "Mobile No",
+        t.product_name as "Product Name", 
+        t.color as "Color",
+        t.item_size as "Size", 
+        t.quantity as "Quantity", 
+        (t.item_disc + t.document_disc) as "Total Disc",
+        t.sales_amount as "Sales Amount", 
+        t.TAX as "Tax", 
+        t.salestax as "Sales+Tax",
+        t.sid as "DOC_SID",
+        (CASE 
+            WHEN t.TENDER_COUNT = 1 THEN 
+                (SELECT CASE WHEN X.TENDER_TYPE = 2 THEN 'Credit Card' ELSE TO_CHAR(X.TENDER_NAME) END
+                 FROM RPS.TENDER X WHERE X.DOC_SID = t.sid AND ROWNUM = 1) 
+            WHEN t.TENDER_COUNT = 2 THEN 
+                (SELECT 'Split ' || LISTAGG(CASE WHEN Y.TENDER_TYPE = 2 THEN 'Credit Card' ELSE TO_CHAR(Y.TENDER_NAME) END, ' & ') 
+                 WITHIN GROUP (ORDER BY Y.TENDER_NAME) 
+                 FROM RPS.TENDER Y WHERE Y.DOC_SID = t.sid AND ROWNUM <= 2) 
+            WHEN t.TENDER_COUNT > 2 THEN 'Split' 
+        END) AS "Tender Name"
+    FROM (
+        SELECT 
+            d.sid,
+            ss.sbs_name,
+            s.store_name AS Shop, d.store_no, d.sbs_no, 
+            TO_CHAR(d.created_datetime, 'DD-MON-YYYY HH24:MI:SS') AS datetime,
+            d.created_datetime,
+            d.doc_no AS Receipt, nvl(d.UDF1_STRING,'N/A') AS "courier_name", 
+            nvl(d.UDF2_STRING,'N/A') AS "payment_gateway", 
+            NVL(NULLIF(TRIM(NVL(TO_CHAR(d.bt_first_name), '') || ' ' || NVL(TO_CHAR(d.bt_last_name), '')), ''), TO_CHAR('N/A')) AS Customer_Name, 
+            d.bt_primary_phone_no AS Mobile_no, i.ATTRIBUTE as color, i.ITEM_SIZE,
+            i.DESCRIPTION1 AS product_code, i.DESCRIPTION2 AS product_name, i.alu, i.orig_PRICE AS retail_price,
+            (CASE WHEN i.item_type=2 THEN -i.qty ELSE i.qty END) AS quantity,
+            (((DECODE(d.USE_VAT,1,I.ORIG_PRICE-NVL(I.ORIG_TAX_AMT,0),I.ORIG_PRICE)-DECODE(d.USE_VAT,1,I.PRICE-NVL(I.TAX_AMT,0),I.PRICE))* DECODE(I.ITEM_TYPE,1,I.QTY,-I.QTY))) AS item_disc, 
+            ((((DECODE(d.USE_VAT,1,i.PRICE,I.PRICE+NVL(I.TAX_AMT,0)) * (NVL(d.DISC_PERC,0)/100))) * DECODE(I.ITEM_TYPE,2,-I.QTY,I.QTY))+(NVL(d.LTY_REDEEM_AMT, 0) / NVL(DI.CNT, 1))) AS document_disc,
+            ((CASE WHEN d.use_vat=1 THEN i.price-nvl(i.tax_amt,0) ELSE i.price END) * (1-NVL(d.DISC_PERC,0)/100) * (CASE WHEN i.item_type=2 THEN -i.qty ELSE i.qty END)) * (1 + (NVL(d.shipping_amt,0) / NULLIF(SUM((CASE WHEN d.use_vat=1 THEN i.price-nvl(i.tax_amt,0) ELSE i.price END) * (1-NVL(d.DISC_PERC,0)/100) * ABS((CASE WHEN i.item_type=2 THEN -i.qty ELSE i.qty END))) OVER (PARTITION BY d.sid), 0))) - (NVL(d.LTY_REDEEM_AMT, 0) / NVL(DI.CNT, 1)) AS sales_amount, 
+            ((I.TAX_AMT*(1-NVL(d.DISC_PERC,0)/100))* DECODE(I.ITEM_TYPE,2,-I.QTY,I.QTY)) AS TAX, 
+            ((CASE WHEN d.use_vat=1 THEN i.price ELSE i.price+nvl(i.tax_amt,0) END) * ((1-NVL(d.DISC_PERC,0)/100)) * (CASE WHEN i.item_type=2 THEN -i.qty ELSE i.qty END)) * (1 + (NVL(d.shipping_amt,0) / NULLIF(SUM((CASE WHEN d.use_vat=1 THEN i.price ELSE i.price+nvl(i.tax_amt,0) END) * ((1-NVL(d.DISC_PERC,0)/100)) * (CASE WHEN i.item_type=2 THEN -i.qty ELSE i.qty END)) OVER (PARTITION BY d.sid), 0))) - (NVL(d.LTY_REDEEM_AMT, 0) / NVL(DI.CNT, 1)) AS salestax,
+            (SELECT COUNT(DISTINCT X.TENDER_TYPE) FROM RPS.TENDER X WHERE X.DOC_SID = D.SID) AS TENDER_COUNT
+        FROM rps.document d 
+        INNER JOIN rps.document_item i ON d.sid=i.DOC_SID 
+        INNER JOIN rps.invn_sbs_item ii ON i.INVN_SBS_ITEM_SID=ii.sid AND d.SUBSIDIARY_SID=ii.sbs_sid 
+        INNER JOIN rps.store s ON d.store_sid=s.sid AND d.subsidiary_sid=s.sbs_sid 
+        INNER JOIN (SELECT DI.DOC_SID AS SID, COUNT(DI.SID) AS CNT FROM rps.document_item DI GROUP BY DI.DOC_SID) DI ON D.SID = DI.SID
+        INNER JOIN rps.subsidiary ss on ss.sid = d.subsidiary_sid
+        WHERE 1=1
+        AND d.store_no = 3
+        AND d.status > 3 AND d.is_held <> 1 AND d.doc_no > 0 AND d.receipt_type IN (0,1) AND S.ACTIVE=1 
+        AND (d.order_doc_no IS NULL OR d.order_doc_no != 0) 
+        ORDER BY d.created_datetime DESC
+    ) t
+) WHERE ROWNUM <= 50
+`;
+
+export async function fetchNewSalesFromRetailPro() {
+    let connection;
+
     try {
-        if (!RP_USER || !RP_PASS) {
-            throw new Error('RETAIL_PRO_USER or RP_PASS missing in environment.');
-        }
+        connection = await oracledb.getConnection(oracleConfig);
+        const result = await connection.execute(MAIN_SALES_QUERY);
+        const rawRows = result.rows || [];
 
-        const loginParams = new URLSearchParams({
-            appid: 'Prism-API-Explorer',
-            usr: RP_USER,
-            pwd: RP_PASS, // Testing raw password if API endpoint expects cleartext or handles hashing internally
-            singlesignon: 'false',
-            ssoforcelogout: 'false',
-            ws: 'webclient'
-        });
+        if (rawRows.length === 0) return [];
 
-        const loginUrl = `${RP_BASE_URL}/api/security/login?${loginParams.toString()}`;
-        const basicAuth = Buffer.from(`${RP_USER}:${RP_PASS}`).toString('base64');
+        const groupedDocumentsMap = rawRows.reduce((acc, row) => {
+            const docSid = row.DOC_SID;
 
-        const response = await fetch(loginUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Basic ${basicAuth}`,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            if (!acc[docSid]) {
+                acc[docSid] = {
+                    document: {
+                        DOC_SID: row.DOC_SID,
+                        ShopName: row['Shop Name'],
+                        DateTime: row['Date Time'],
+                        ReceiptNo: row['Receipt No'],
+                        CustomerName: row['Customer Name'],
+                        MobileNo: row['Mobile No'],
+                        TenderName: row['Tender Name']
+                    },
+                    items: []
+                };
             }
-        });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Prism Login Failed (${response.status}): ${errText}`);
-        }
+            acc[docSid].items.push({
+                productName: row['Product Name'],
+                color: row.Color,
+                size: row.Size,
+                quantity: safeNum(row.Quantity) || 1,
+                totalDiscount: safeNum(row['Total Disc']),
+                salesAmount: safeNum(row['Sales Amount']),
+                tax: safeNum(row.Tax),
+                totalWithTax: safeNum(row['Sales+Tax'])
+            });
 
-        const sessionHeader = response.headers.get('auth-session') || response.headers.get('Auth-Session');
-        if (sessionHeader) {
-            console.log('🔑 Prism Security Auth-Session Established (Header):', sessionHeader);
-            return sessionHeader;
-        }
+            return acc;
+        }, {});
 
-        const data = await response.json();
-        let token = null;
-
-        if (Array.isArray(data) && data.length > 0) {
-            token = data[0].AuthSession || data[0].sid || data[0].SessionID || data[0].string;
-        } else if (data && typeof data === 'object') {
-            token = data.AuthSession || data.sid || data.SessionID || data.string;
-        }
-
-        if (!token) {
-            throw new Error(`Auth-Session missing in login payload: ${JSON.stringify(data)}`);
-        }
-
-        console.log('🔑 Prism Security Auth-Session Established (Body):', token);
-        return token;
-
-    } catch (err) {
-        console.error('❌ Retail Pro Security Login Error:', err.message);
-        return null;
-    }
-}
-
-
-// let lastSyncTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-
-async function fetchNewSalesFromRetailPro() {
-    try {
-        if (!activeAuthSession) {
-            activeAuthSession = await getPrismAuthSession();
-        }
-
-        if (!activeAuthSession) {
-            console.error('❌ Sync skipped: Could not authenticate with Retail Pro.');
-            return [];
-        }
-
-        const headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Auth-Session': activeAuthSession,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-        };
-
-        // Added API-level sorting: sort=created_datetime,desc
-        const targetUrl = `${RP_BASE_URL}/v1/rest/document?cols=*&sort=created_datetime,desc&page_no=1&page_size=50`;
-
-        let response = await fetch(targetUrl, { headers });
-
-        if (response.status === 401 || response.status === 403) {
-            activeAuthSession = await getPrismAuthSession();
-            if (activeAuthSession) {
-                headers['Auth-Session'] = activeAuthSession;
-                response = await fetch(targetUrl, { headers });
-            }
-        }
-
-        if (!response.ok) {
-            throw new Error(`Prism REST Error: ${response.status} ${response.statusText}`);
-        }
-
-        const documents = await response.json();
-
-        if (!Array.isArray(documents)) return [];
-
-        // Store 3 & completed sales filter
-        const completedSales = documents.filter(doc => {
-            const isStore3 = String(doc.store_number) === '3';
-            return isStore3 &&
-                doc.is_held === false &&
-                doc.has_sale === true &&
-                doc.has_return === false &&
-                doc.document_number !== 0 &&
-                doc.document_number != null;
-        });
-
-        const fullSales = await Promise.all(
-            completedSales.map(async (doc) => {
-                if (!doc.items || !Array.isArray(doc.items)) {
-                    return { document: doc, items: [] };
-                }
-                const itemDetails = await Promise.all(
-                    doc.items.map(async (itemRef) => {
-                        try {
-                            if (!itemRef.link) return null;
-                            const itemResponse = await fetch(`${RP_BASE_URL}${itemRef.link}`, { headers });
-                            if (!itemResponse.ok) return null;
-                            const itemData = await itemResponse.json();
-                            return Array.isArray(itemData) ? itemData[0] : itemData;
-                        } catch (err) {
-                            return null;
-                        }
-                    })
-                );
-                return { document: doc, items: itemDetails.filter(Boolean) };
-            })
-        );
-
-        return fullSales;
+        return Object.values(groupedDocumentsMap);
 
     } catch (error) {
-        console.error('❌ Retail Pro Fetch Error:', error.message);
-        activeAuthSession = null;
+        console.error('❌ Oracle Fetch Sales Error:', error.message);
         return [];
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (closeErr) {
+                console.error('Error closing Oracle connection:', closeErr.message);
+            }
+        }
     }
 }
 
-function mapRetailProSaleToOurFormat(sale) {
-    const { document, items } = sale;
+export function mapRetailProSaleToOurFormat(saleGroup) {
+    const doc = saleGroup.document;
+    const items = saleGroup.items;
+
+    const subtotal = items.reduce((sum, item) => sum + safeNum(item.salesAmount), 0);
+    const taxTotal = items.reduce((sum, item) => sum + safeNum(item.tax), 0);
+    const discountTotal = items.reduce((sum, item) => sum + safeNum(item.totalDiscount), 0);
+    const payableTotal = items.reduce((sum, item) => sum + safeNum(item.totalWithTax), 0);
+
+    // Replace paymentMode logic with hard 10-character limit truncate:
+    const rawTender = doc.TenderName || 'Cash';
+    const tenderMap = {
+        'Credit Card': 'Card',
+        'COD': 'COD'
+    };
+
+    // Map tender value and strictly enforce a max length of 10 characters
+    const normalizedPaymentMode = (tenderMap[rawTender] || rawTender).substring(0, 10);
+
 
     return {
-        storeId: document.store_number || 1,
-        invoiceNo: `${document.store_number}-${document.document_number}`,
-        idempotencyKey: `rp-${document.sid}`,
-        billTo: `${document.bt_first_name || ''} ${document.bt_last_name || ''}`.trim() || 'Walk-in Customer',
-        customerPhone: document.bt_primary_phone_no || null,
-        paymentMode: 'Cash',
-        items: items.map(item => ({
-            name: item.item_lookup || item.item_description1 || 'Item',
-            qty: Number(item.quantity || 1),
-            price: parseFloat(item.price || 0),
-            gstPercent: parseFloat(item.tax_percent || 0)
-        })),
+        storeId: 3,
+        invoiceNo: `${doc.ReceiptNo}`,
+        idempotencyKey: `rp-${doc.DOC_SID}`,
+        billTo: doc.CustomerName !== 'N/A' ? doc.CustomerName : 'Walk-in Customer',
+        customerPhone: doc.MobileNo !== 'N/A' ? doc.MobileNo : null,
+        paymentMode: normalizedPaymentMode,
+        createdAt: doc.DateTime,
+        items: items.map(item => {
+            const amt = safeNum(item.salesAmount);
+            const tx = safeNum(item.tax);
+            const tot = safeNum(item.totalWithTax);
+
+            return {
+                name: `${item.productName} (${item.color}/${item.size})`,
+                quantity: safeNum(item.quantity) || 1,
+                amount: parseFloat(amt.toFixed(2)),
+                tax: parseFloat(tx.toFixed(2)),
+                total: parseFloat(tot.toFixed(2))
+            };
+        }),
         summary: {
-            total: parseFloat(document.sale_subtotal || 0),
-            discount: parseFloat(document.total_discount_amt || 0),
-            gst: parseFloat(document.sale_total_tax_amt || 0),
+            total: parseFloat(subtotal.toFixed(2)),
+            discount: parseFloat(discountTotal.toFixed(2)),
+            gst: parseFloat(taxTotal.toFixed(2)),
             posFee: 1.00,
-            payable: parseFloat(document.transaction_total_amt || 0)
+            payable: parseFloat((payableTotal + 1.00).toFixed(2))
         }
     };
 }
-
-export { fetchNewSalesFromRetailPro, mapRetailProSaleToOurFormat };

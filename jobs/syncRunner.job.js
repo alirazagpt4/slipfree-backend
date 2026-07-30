@@ -6,39 +6,39 @@ import { createInvoice } from '../services/invoice.service.js';
 let isSyncRunning = false;
 
 export const initSyncScheduler = () => {
-  cron.schedule('*/1 * * * *', async () => {
-    if (isSyncRunning) {
-      console.warn('⚠️ Previous sync run is still active. Skipping this cycle.');
-      return;
-    }
+    cron.schedule('*/1 * * * *', async () => {
+        if (isSyncRunning) return;
+        isSyncRunning = true;
 
-    isSyncRunning = true;
-    console.log('🔄 Checking Retail Pro for new sales...');
+        console.log('🔄 Checking Retail Pro for new sales...');
 
-    try {
-      const sales = await fetchNewSalesFromRetailPro();
+        try {
+            const sales = await fetchNewSalesFromRetailPro();
 
-      for (const sale of sales) {
-        const formattedData = mapRetailProSaleToOurFormat(sale);
+            for (const sale of sales) {
+                // Individual Try-Catch block taake ek item ki wajah se pura loop crash na ho
+                try {
+                    const formattedData = mapRetailProSaleToOurFormat(sale);
+                    const result = await createInvoice(formattedData);
 
-        // Transactionally save to DB with idempotency verification
-        const result = await createInvoice(formattedData);
+                    if (!result.duplicate) {
+                        console.log(`✅ Synced Invoice: ${formattedData.invoiceNo} | Hash: ${result.receiptHash}`);
 
-        if (!result.duplicate) {
-          console.log(`✅ Synced Invoice: ${formattedData.invoiceNo} | Hash: ${result.receiptHash}`);
-
-          // WhatsApp Trigger Placeholder
-          if (formattedData.customerPhone) {
-            // TODO: Jab WhatsApp module ready ho, send function yahan trigger karna:
-            // sendWhatsAppReceipt(formattedData.customerPhone, result.receiptUrl);
-            console.log(`📱 [Pending WhatsApp Dispatch] Phone: ${formattedData.customerPhone} | Link: ${result.receiptUrl}`);
-          }
+                        if (formattedData.customerPhone) {
+                            console.log(`📱 [Pending WhatsApp Dispatch] Phone: ${formattedData.customerPhone} | Link: ${result.receiptUrl}`);
+                        }
+                    } else {
+                        console.log(`ℹ️ Skipped (Already Synced): ${formattedData.invoiceNo}`);
+                    }
+                } catch (itemErr) {
+                    // Specific validation or duplicate log output
+                    console.warn(`⚠️ Skipped Invoice due to Validation/Duplicate Issue:`, itemErr.message);
+                }
+            }
+        } catch (err) {
+            console.error('❌ Sync Job Execution Error:', err.message);
+        } finally {
+            isSyncRunning = false;
         }
-      }
-    } catch (err) {
-      console.error('❌ Sync Job Execution Error:', err.message);
-    } finally {
-      isSyncRunning = false; // Mutex release
-    }
-  });
+    });
 };
