@@ -12,6 +12,11 @@ const Invoice = sequelize.define('Invoice', {
         unique: true,
         allowNull: false
     },
+    fbr_invoice_no: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        defaultValue: null
+    },
     idempotency_key: {
         type: DataTypes.STRING(100),
         unique: true,
@@ -21,6 +26,10 @@ const Invoice = sequelize.define('Invoice', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    shop_name: { type: DataTypes.STRING(255), allowNull: true },
+    shop_address: { type: DataTypes.STRING(500), allowNull: true },
+    shop_phone: { type: DataTypes.STRING(50), allowNull: true },
+    cashier_name: { type: DataTypes.STRING(255), allowNull: true },
     customer_name: {
         type: DataTypes.STRING(100),
         allowNull: true
@@ -50,8 +59,9 @@ const Invoice = sequelize.define('Invoice', {
         allowNull: false
     },
     payment_mode: {
-        type: DataTypes.ENUM('Cash', 'Card'),
-        allowNull: false
+        type: DataTypes.STRING(100), // ENUM hata kar STRING(100) lagao
+        allowNull: false,
+        defaultValue: 'Cash'
     }
 }, {
     tableName: 'invoices',
