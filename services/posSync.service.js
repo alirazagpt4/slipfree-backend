@@ -117,7 +117,7 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
         );
 
         const rawRows = result.rows || [];
-        console.log(`🔍 Oracle fetched ${rawRows.length} raw rows (lookback: ${lookbackDate.toISOString()})`);
+        // console.log(`🔍 Oracle fetched ${rawRows.length} raw rows (lookback: ${lookbackDate.toISOString()})`);
 
         if (rawRows.length === 0) return [];
 
@@ -153,12 +153,12 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
             const rawSalesAmt = row['Sales Amount'];
             const calculatedUnitPrice = rawQty ? (rawSalesAmt / rawQty).toFixed(2) : rawSalesAmt;
 
-            console.log(`\n--- [ORACLE FETCH DEBUG] Receipt #${row['Receipt No']} ---`);
-            console.log(`📦 Item: ${row['Product Name']}`);
-            console.log(`🔢 Raw Quantity (Oracle):`, rawQty, `| Type: ${typeof rawQty}`);
-            console.log(`💰 Raw Sales Amount (Oracle):`, rawSalesAmt, `| Type: ${typeof rawSalesAmt}`);
-            console.log(`🏷️ Derived Unit Price (Sales/Qty):`, calculatedUnitPrice);
-            console.log(`--------------------------------------------------`);
+            // console.log(`\n--- [ORACLE FETCH DEBUG] Receipt #${row['Receipt No']} ---`);
+            // console.log(`📦 Item: ${row['Product Name']}`);
+            // console.log(`🔢 Raw Quantity (Oracle):`, rawQty, `| Type: ${typeof rawQty}`);
+            // console.log(`💰 Raw Sales Amount (Oracle):`, rawSalesAmt, `| Type: ${typeof rawSalesAmt}`);
+            // console.log(`🏷️ Derived Unit Price (Sales/Qty):`, calculatedUnitPrice);
+            // console.log(`--------------------------------------------------`);
 
             acc[docSid].items.push({
                 productName: row['Product Name'],

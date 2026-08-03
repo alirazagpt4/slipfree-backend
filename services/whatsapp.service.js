@@ -54,15 +54,16 @@ export async function sendReceiptWhatsApp(customerPhone, receiptUrl, shopName = 
     const recipientPhone = formatPhoneNumber(customerPhone);
     const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
 
-    // Production Template Payload (Meta Dynamic Body Variable {{1}} Mapping)
+    
     const payload = {
         messaging_product: 'whatsapp',
         to: recipientPhone,
         type: 'template',
         template: {
-            name: process.env.WHATSAPP_TEMPLATE_NAME || 'hello_whatsapp_template',
+            name: process.env.WHATSAPP_TEMPLATE_NAME || "slipfree_receipt_v3",
             language: {
-                code: 'en'
+                code: 'en',
+                locale: 'en_US'
             },
             components: [
                 {
@@ -86,6 +87,8 @@ export async function sendReceiptWhatsApp(customerPhone, receiptUrl, shopName = 
             },
             timeout: 10000 // 10s Timeout guard
         });
+
+        console.log('[WhatsApp API Delivery Success]:', JSON.stringify(response.data, null, 2));
 
         return response.data;
     } catch (error) {

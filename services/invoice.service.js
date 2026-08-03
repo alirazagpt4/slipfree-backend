@@ -97,8 +97,8 @@ async function createInvoice(data) {
 
 
     // 🔍 EXACT TERMINAL CHECK LOG in invoice service 
-    console.log(`\n>>> MAPPED PAYLOAD FOR RECEIPT #${invoice.invoice_no} <<<`);
-    console.dir(invoice, { depth: null, colors: true });
+    // console.log(`\n>>> MAPPED PAYLOAD FOR RECEIPT #${invoice.invoice_no} <<<`);
+    // console.dir(invoice, { depth: null, colors: true });
 
     return {
         duplicate: false,
