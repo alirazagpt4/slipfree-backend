@@ -54,7 +54,7 @@ export async function sendReceiptWhatsApp(customerPhone, receiptUrl, shopName = 
     const recipientPhone = formatPhoneNumber(customerPhone);
     const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
 
-    
+
     const payload = {
         messaging_product: 'whatsapp',
         to: recipientPhone,
@@ -63,7 +63,7 @@ export async function sendReceiptWhatsApp(customerPhone, receiptUrl, shopName = 
             name: process.env.WHATSAPP_TEMPLATE_NAME || "slipfree_receipt_v3",
             language: {
                 code: 'en',
-                locale: 'en_US'
+
             },
             components: [
                 {

@@ -7,6 +7,10 @@ const Feedback = sequelize.define('Feedback', {
         allowNull: false,
         unique: true
     },
+    invoice_no: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
     rating: {
         type: DataTypes.ENUM('worst', 'not_good', 'fine', 'good', 'best'),
         allowNull: false

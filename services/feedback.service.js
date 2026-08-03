@@ -25,6 +25,7 @@ async function submitFeedback(hash, rating, comment) {
 
     const feedback = await Feedback.create({
         invoice_id: invoice.id,
+        invoice_no: invoice.invoice_no,
         rating,
         comment: comment || null
     });
