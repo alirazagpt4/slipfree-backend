@@ -1,4 +1,5 @@
 import { Invoice, Feedback } from '../models/associations.model.js';
+import { pushFeedbackToOracle } from './oracleFeedback.service.js';
 
 async function submitFeedback(hash, rating, comment) {
     console.log('🔍 Feedback attempt — hash:', hash, '| rating:', rating); // NAYA
@@ -30,7 +31,20 @@ async function submitFeedback(hash, rating, comment) {
         comment: comment || null
     });
 
-    console.log('✅ Feedback created with id:', feedback.id); // NAYA
+    console.log('✅ Feedback created with id:', feedback.id);
+
+    const oraclePayload = {
+        invoice_id: feedback.invoice_id,
+        invoice_no: feedback.invoice_no,
+        rating: feedback.rating
+    };
+
+
+    // Non-blocking invocation with explicit Error Boundary
+    pushFeedbackToOracle(oraclePayload).catch(err => {
+        console.error('[Oracle Async Queue Failure]:', err.message || err);
+    });
+
 
     return feedback;
 }
