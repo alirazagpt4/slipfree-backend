@@ -18,12 +18,14 @@ export async function pushFeedbackToOracle(data) {
             INSERT INTO invoice_feedback (
                 INVOICE_ID, 
                 INVOICE_NO, 
-                RATING, 
+                RATING,
+                SHOP_NAME,
                 SUBMITTED_AT
             ) VALUES (
                 :invoice_id, 
                 :invoice_no, 
                 :rating, 
+                :shop_name,
                 CURRENT_TIMESTAMP
             )
         `;
@@ -34,7 +36,8 @@ export async function pushFeedbackToOracle(data) {
         const bindParams = {
             invoice_id: data.invoice_id ? String(data.invoice_id) : '0',
             invoice_no: data.invoice_no ? String(data.invoice_no) : 'N/A',
-            rating: safeRating
+            rating: safeRating,
+            shop_name: data.shop_name ? String(data.shop_name) : 'N/A'
         };
 
         console.log('🚨 ORACLE PAYLOAD BEING SENT:', JSON.stringify(bindParams));

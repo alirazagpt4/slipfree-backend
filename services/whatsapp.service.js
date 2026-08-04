@@ -60,9 +60,9 @@ export async function sendReceiptWhatsApp(customerPhone, receiptUrl, shopName = 
         to: recipientPhone,
         type: 'template',
         template: {
-            name: process.env.WHATSAPP_TEMPLATE_NAME || "slipfree_receipt_v3",
+            name: process.env.WHATSAPP_TEMPLATE_NAME || "slipfree_receipt_v2",
             language: {
-                code: 'en',
+                code: 'en_US',
 
             },
             components: [

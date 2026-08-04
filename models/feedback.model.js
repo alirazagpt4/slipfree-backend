@@ -11,6 +11,10 @@ const Feedback = sequelize.define('Feedback', {
         type: DataTypes.STRING(50),
         allowNull: true
     },
+    shop_name: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+    },
     rating: {
         type: DataTypes.ENUM('worst', 'not_good', 'fine', 'good', 'best'),
         allowNull: false

@@ -27,6 +27,7 @@ async function submitFeedback(hash, rating, comment) {
     const feedback = await Feedback.create({
         invoice_id: invoice.id,
         invoice_no: invoice.invoice_no,
+        shop_name: invoice.shop_name,
         rating,
         comment: comment || null
     });
@@ -36,7 +37,8 @@ async function submitFeedback(hash, rating, comment) {
     const oraclePayload = {
         invoice_id: feedback.invoice_id,
         invoice_no: feedback.invoice_no,
-        rating: feedback.rating
+        rating: feedback.rating,
+        shop_name: feedback.shop_name,
     };
 
 
