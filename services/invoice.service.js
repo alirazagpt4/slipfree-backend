@@ -4,7 +4,7 @@ import { generateReceiptHash } from '../utils/hash.js';
 import { sendReceiptWhatsApp } from './whatsapp.service.js';
 
 function buildReceiptUrl(hash) {
-    const base = process.env.RECEIPT_BASE_URL || 'http://localhost:3000/receipt';
+    const base = process.env.RECEIPT_BASE_URL || 'https://slipfree.nexonsys.com/v';
     return `${base}/${hash}`;
 }
 
