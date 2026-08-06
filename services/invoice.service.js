@@ -46,6 +46,7 @@ async function createInvoice(data) {
             cashier_name: data.cashierName || null,  // NAYA
             customer_name: data.billTo || null,
             customer_phone: data.customerPhone || null,
+            price_excl_tax: safeNum(data.summary?.price_excl_tax),
             total_amount: safeNum(data.summary?.total),
             discount: safeNum(data.summary?.discount),
             gst_amount: safeNum(data.summary?.gst),

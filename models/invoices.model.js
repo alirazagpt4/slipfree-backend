@@ -38,6 +38,11 @@ const Invoice = sequelize.define('Invoice', {
         type: DataTypes.STRING(20),
         allowNull: true
     },
+    price_excl_tax: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00
+    },
     total_amount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false

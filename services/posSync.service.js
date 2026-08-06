@@ -119,6 +119,10 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
         const rawRows = result.rows || [];
         // console.log(`🔍 Oracle fetched ${rawRows.length} raw rows (lookback: ${lookbackDate.toISOString()})`);
 
+        // 🔍 1. RAW ORACLE DB ROWS PRINT (Pehla level check)
+        console.log("==================== RAW ORACLE ROWS ====================");
+        console.dir(rawRows.slice(0, 5), { depth: null, colors: true });
+
         if (rawRows.length === 0) return [];
 
         const groupedDocumentsMap = rawRows.reduce((acc, row) => {
@@ -194,7 +198,8 @@ export function mapRetailProSaleToOurFormat(saleGroup) {
     const doc = saleGroup.document;
     const items = saleGroup.items;
 
-    const subtotal = roundTwoDecimal(items.reduce((sum, item) => sum + item.salesAmount, 0));
+    const price_excl_tax = roundTwoDecimal(items.reduce((sum, item) => sum + item.salesAmount, 0));
+    const subtotal = roundTwoDecimal(items.reduce((sum, item) => sum + item.totalWithTax, 0));
     const taxTotal = roundTwoDecimal(items.reduce((sum, item) => sum + item.tax, 0));
     const discountTotal = roundTwoDecimal(items.reduce((sum, item) => sum + item.totalDiscount, 0));
     const payableTotal = roundTwoDecimal(items.reduce((sum, item) => sum + item.totalWithTax, 0));
@@ -229,10 +234,11 @@ export function mapRetailProSaleToOurFormat(saleGroup) {
         items: items.map(item => ({
             name: `${item.productName}${item.color || item.size ? ` (${item.color || ''}/${item.size || ''})` : ''}`,
             qty: item.quantity,
-            price: item.quantity > 0 ? roundTwoDecimal(item.salesAmount / item.quantity) : item.salesAmount,
+            price: item.quantity > 0 ? roundTwoDecimal(item.totalWithTax / item.quantity) : item.totalWithTax,
             gst_percent: item.tax // Exact float value from Oracle (0.47619)
         })),
         summary: {
+            price_excl_tax: price_excl_tax,
             total: subtotal,
             discount: discountTotal,
             gst: taxTotal,
