@@ -120,8 +120,8 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
         // console.log(`🔍 Oracle fetched ${rawRows.length} raw rows (lookback: ${lookbackDate.toISOString()})`);
 
         // 🔍 1. RAW ORACLE DB ROWS PRINT (Pehla level check)
-        console.log("==================== RAW ORACLE ROWS ====================");
-        console.dir(rawRows.slice(0, 5), { depth: null, colors: true });
+        // console.log("==================== RAW ORACLE ROWS ====================");
+        // console.dir(rawRows.slice(0, 5), { depth: null, colors: true });
 
         if (rawRows.length === 0) return [];
 
