@@ -19,7 +19,7 @@ const InvoiceItem = sequelize.define('InvoiceItem', {
         allowNull: false
     },
     gst_percent: {
-        type: DataTypes.DECIMAL(5, 2),
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false
     },
     total_price: {
