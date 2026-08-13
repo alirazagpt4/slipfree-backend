@@ -233,6 +233,9 @@ export function mapRetailProSaleToOurFormat(saleGroup) {
         paymentMode: normalizedPaymentMode,
         items: items.map(item => ({
             name: `${item.productName}${item.color || item.size ? ` (${item.color || ''}/${item.size || ''})` : ''}`,
+            product_name: item.productName,
+            color: item.color,
+            size: item.size,
             qty: item.quantity,
             price: item.quantity > 0 ? roundTwoDecimal(item.totalWithTax / item.quantity) : item.totalWithTax,
             gst_percent: item.tax // Exact float value from Oracle (0.47619)

@@ -69,6 +69,9 @@ async function createInvoice(data) {
             return {
                 invoice_id: newInvoice.id,
                 item_name: item.name || 'Unknown Item',
+                product_name: item.productName || 'Unknown Item',
+                color: item.color || 'Unknown Color',
+                size: item.size || 'Unknown Size',
                 quantity: qty,
                 unit_price: unitPrice,
                 gst_percent: tax,

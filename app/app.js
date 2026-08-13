@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import invoiceRoutes from '../routes/invoice.routes.js';
 import feedbackRoutes from '../routes/feedback.routes.js';
 import adminRoutes from '../routes/admin.routes.js';
+import customerSegmentRoutes from '../routes/customerSegment.routes.js'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,10 +22,13 @@ app.use('/api/v1/receipts', feedbackRoutes);
 // Admin routes
 app.use('/api/v1/admin', adminRoutes);
 
-// React build ki static files serve karo
+// Customer Segment routes
+app.use('/api/v1', customerSegmentRoutes);
+
+// React build server
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Baaki sab routes (jo API nahi hain) React ke index.html pe bhej do
+// React index.html serve for all other routes
 app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });

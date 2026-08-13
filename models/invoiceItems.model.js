@@ -6,6 +6,18 @@ const InvoiceItem = sequelize.define('InvoiceItem', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    product_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    color: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
+    size: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
     item_name: {
         type: DataTypes.STRING(255),
         allowNull: false
