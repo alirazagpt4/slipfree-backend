@@ -1,5 +1,6 @@
 import { invoiceSchema } from '../validators/invoiceSchema.js';
-import { createInvoice , getInvoiceByHash} from '../services/invoice.service.js';
+import { createInvoice, getInvoiceByHash } from '../services/invoice.service.js';
+import { sendReceiptWhatsApp } from '../services/whatsapp.service.js';
 
 async function ingestInvoice(req, res) {
     // Validation yahan controller mein hoti hai — kyunki ye HTTP-specific
@@ -13,6 +14,25 @@ async function ingestInvoice(req, res) {
         const result = await createInvoice(parsed.data);
 
         const statusCode = result.duplicate ? 200 : 201;
+
+        // 🚀 Non-blocking Async Dispatch + Argument Order Fix + Duplicate Guard
+        if (!result.duplicate && parsed.data.customerPhone) {
+            sendReceiptWhatsApp(
+                parsed.data.customerPhone, // Arg 1: Phone Number
+                result.receiptUrl,          // Arg 2: URL
+                parsed.data.shopName || 'Logo Opia' // Arg 3: Shop Name
+            ).then(resData => {
+                if (resData) {
+                    console.log(`✅ WhatsApp sent to ${parsed.data.customerPhone}`);
+                } else {
+                    console.warn(`⚠️ WhatsApp dispatch returned null for ${parsed.data.customerPhone}`);
+                }
+            }).catch(waErr => {
+                console.error(`❌ Non-fatal WhatsApp Error:`, waErr.message);
+            });
+        }
+
+
 
         return res.status(statusCode).json({
             success: true,
@@ -42,4 +62,4 @@ async function getReceipt(req, res) {
     }
 }
 
-export { ingestInvoice , getReceipt };
+export { ingestInvoice, getReceipt };
