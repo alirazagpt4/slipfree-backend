@@ -8,15 +8,6 @@ All responses are JSON and include a top-level `success: boolean`.
 
 ## Utility endpoints
 
-### `GET /`
-
-Root status check.
-
-**Response `200`**
-```json
-{ "status": "ok", "message": "Digital Receipt System running" }
-```
-
 ### `GET /health`
 
 Health check.
@@ -25,6 +16,8 @@ Health check.
 ```json
 { "status": "ok" }
 ```
+
+Any other request path that doesn't start with `/api` is served the React SPA (`public/index.html`), not a JSON response.
 
 ---
 
@@ -149,6 +142,9 @@ GET /api/v1/receipts/e744ca5db55b71251aba0fca93357a99
       {
         "id": 1,
         "invoice_id": 1,
+        "product_name": "Coffee",
+        "color": "Unknown Color",
+        "size": "Unknown Size",
         "item_name": "Coffee",
         "quantity": 2,
         "unit_price": "150.00",
@@ -213,3 +209,134 @@ Content-Type: application/json
 | `404` | No invoice with that hash | `{ "success": false, "error": "Invoice not found" }` |
 | `409` | Feedback already submitted for this receipt | `{ "success": false, "error": "Feedback already submitted for this receipt" }` |
 | `500` | Unexpected server/DB error | `{ "success": false, "error": "Internal server error" }` |
+
+---
+
+## Admin endpoints
+
+Base path: `/api/v1/admin`
+
+### `POST /api/v1/admin/login`
+
+Exchanges admin credentials for a JWT (24h expiry).
+
+**Auth**: none
+
+**Request body**
+
+| Field | Type | Required |
+|---|---|---|
+| `username` | string | yes |
+| `password` | string | yes |
+
+**Response `200`**
+```json
+{ "success": true, "token": "<jwt>" }
+```
+
+**Errors**
+
+| Status | Cause | Body |
+|---|---|---|
+| `401` | Wrong `username` or `password` | `{ "success": false, "error": "Invalid credentials" }` |
+
+### `GET /api/v1/admin/invoices`
+
+Lists every invoice with its items and feedback eager-loaded, newest first. No filtering or pagination.
+
+**Auth**: required. Header `Authorization: Bearer <jwt>` (from `/login`)
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "invoices": [
+    {
+      "id": 1,
+      "receipt_hash": "e744ca5db55b71251aba0fca93357a99",
+      "invoice_no": "INV-1001",
+      "...": "all invoice columns",
+      "items": [ "..." ],
+      "feedback": { "rating": "good", "comment": "Fast service, thanks!", "submitted_at": "..." }
+    }
+  ]
+}
+```
+
+**Errors**
+
+| Status | Cause | Body |
+|---|---|---|
+| `401` | Missing `Authorization` header | `{ "success": false, "error": "Login required" }` |
+| `403` | Invalid/expired JWT | `{ "success": false, "error": "Invalid or expired session" }` |
+| `500` | Unexpected server/DB error | `{ "success": false, "error": "Internal server error" }` |
+
+---
+
+## Customer segment endpoints
+
+Base path: `/api/v1`. No auth on either endpoint.
+
+### `POST /api/v1/segments`
+
+Saves a named list of customers as a segment.
+
+**Request body**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `segment_name` | string | yes | Non-empty |
+| `filter_criteria` | object | no | Arbitrary, stored as-is |
+| `customer_list` | array | yes | Non-empty. Each entry may have `customer_name`/`name`, `customer_phone`/`phone`, `feedback` — normalized server-side, missing name defaults to `"Walk-In Customer"`, missing phone to `"N/A"` |
+
+**Response `201`**
+```json
+{
+  "success": true,
+  "message": "Segment saved successfully.",
+  "data": {
+    "id": 1,
+    "segment_name": "VIP Customers",
+    "filter_criteria": null,
+    "customer_list": [ { "customer_name": "John Doe", "customer_phone": "9876543210", "feedback": "" } ],
+    "created_at": "...",
+    "updated_at": "..."
+  }
+}
+```
+
+**Errors**
+
+| Status | Cause | Body |
+|---|---|---|
+| `400` | Missing/empty `segment_name` | `{ "success": false, "message": "Segment name required." }` |
+| `400` | Missing/empty `customer_list` | `{ "success": false, "message": "Customer list cannot be empty." }` |
+| `500` | Unexpected server/DB error | `{ "success": false, "message": "<error message>" }` |
+
+### `GET /api/v1/segments`
+
+Lists all segments, newest first, with a computed `total_customers` count.
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "count": 1,
+  "segments": [
+    {
+      "id": 1,
+      "segment_name": "VIP Customers",
+      "filter_criteria": null,
+      "total_customers": 1,
+      "created_at": "...",
+      "customer_list": [ "..." ]
+    }
+  ]
+}
+```
+
+**Errors**
+
+| Status | Cause | Body |
+|---|---|---|
+| `500` | Unexpected server/DB error | `{ "success": false, "message": "<error message>" }` |
