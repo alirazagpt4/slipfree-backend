@@ -16,4 +16,8 @@ app.get('/', (req, res) => {
     res.json({ status: 'ok', message: 'Digital Receipt System running' });
 });
 
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
 export default app;
