@@ -6,6 +6,7 @@ import invoiceRoutes from '../routes/invoice.routes.js';
 import feedbackRoutes from '../routes/feedback.routes.js';
 import adminRoutes from '../routes/admin.routes.js';
 import customerSegmentRoutes from '../routes/customerSegment.routes.js'
+import customerListRoutes from '../routes/customerList.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,9 @@ app.use('/api/v1/admin', adminRoutes);
 
 // Customer Segment routes
 app.use('/api/v1', customerSegmentRoutes);
+
+// Customer List routes
+app.use('/api/v1/customers', customerListRoutes);
 
 // React build server
 app.use(express.static(path.join(__dirname, '..', 'public')));
