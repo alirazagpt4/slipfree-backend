@@ -8,6 +8,7 @@ export const fetchGlobalUniqueCustomersService = async () => {
     // 1. Data Minimization: Select only customer_list column from DB
     const segments = await CustomerSegment.findAll({
         attributes: ['customer_list'],
+        order: [['created_at', 'DESC']],
         raw: true
     });
 
