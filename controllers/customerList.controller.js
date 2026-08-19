@@ -1,11 +1,11 @@
-import { fetchMasterCustomers } from '../services/masterCustomers.service.js';
+import { fetchMasterCustomers } from '../services/customerList.service.js';
 
 export const getGlobalUniqueCustomers = async (req, res) => {
     try {
         const uniqueCustomers = await fetchMasterCustomers();
 
         // Exact original structure intact
-        return res.status(200).json({       
+        return res.status(200).json({
             success: true,
             total_count: uniqueCustomers.length,
             data: uniqueCustomers
