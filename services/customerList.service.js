@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import oracledb from 'oracledb';
-// import { formatPakistaniPhoneNumber } from '../utils/numberFormatter.js';
+import normalizePhone from '../utils/numberFormatter.js';
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
@@ -64,7 +64,7 @@ export const fetchMasterCustomers = async () => {
         );
 
         const rows = result.rows || [];
-        console.log("Rows: ", rows);
+        // console.log("Rows: ", rows);
         const uniqueCustomersMap = new Map();
 
         // O(N) Deduplication
@@ -73,11 +73,11 @@ export const fetchMasterCustomers = async () => {
             const cleanPhone = rawPhone !== '' ? rawPhone : 'N/A';
 
             // Key selection based on Phone OR Name fallback
-            const mapKey = cleanPhone !== 'N/A' ? cleanPhone : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
+            const mapKey = cleanPhone !== 'N/A' ? normalizePhone(cleanPhone) : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
 
             if (!uniqueCustomersMap.has(mapKey)) {
                 uniqueCustomersMap.set(mapKey, {
-                    phone: cleanPhone,
+                    phone: normalizePhone(cleanPhone),
                     name: item.CUSTOMER_NAME || 'Unknown Customer',
                     email: item.EMAIL_ADDRESS || 'N/A',
                     address: item.CUSTOMER_ADDRESS || 'N/A',
