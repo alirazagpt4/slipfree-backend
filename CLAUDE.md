@@ -30,7 +30,7 @@ routes/*.routes.js → middlewares/ → controllers/*.controller.js → services
 - **Services** own business logic and all DB access (via the Sequelize models). They throw `Error` objects with a `.statusCode` property for expected failure cases (e.g. 404 invoice not found, 409 duplicate feedback); controllers read `error.statusCode` and fall back to 500.
 - **Models** (`models/*.model.js`) define Sequelize schemas individually; `models/associations.model.js` is the single place where relationships between them are wired up (`Invoice.hasMany(InvoiceItem)`, `Invoice.hasOne(Feedback)`) and is the canonical import point for models used together.
 
-Routes are mounted in `app/app.js`: receipts + feedback under `/api/v1/receipts`, admin under `/api/v1/admin`, customer segments under `/api/v1` (i.e. `/api/v1/segments`).
+Routes are mounted in `app/app.js`: receipts + feedback under `/api/v1/receipts`, admin under `/api/v1/admin`, customer segments under `/api/v1` (i.e. `/api/v1/segments`), customer list under `/api/v1/customers` (i.e. `/api/v1/customers/customers-list` — dedupes customers across all `CustomerSegment.customer_list` rows by phone number).
 
 ### Two invoice-creation entry points
 

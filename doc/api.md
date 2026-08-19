@@ -340,3 +340,30 @@ Lists all segments, newest first, with a computed `total_customers` count.
 | Status | Cause | Body |
 |---|---|---|
 | `500` | Unexpected server/DB error | `{ "success": false, "message": "<error message>" }` |
+
+---
+
+## Customer list endpoints
+
+Base path: `/api/v1/customers`. No auth.
+
+### `GET /api/v1/customers/customers-list`
+
+Returns a deduplicated master list of customers across all saved segments (dedupes by phone number, first occurrence wins).
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "total_count": 1,
+  "data": [
+    { "phone": "9876543210", "name": "John Doe", "last_feedback": "Fast service, thanks!" }
+  ]
+}
+```
+
+**Errors**
+
+| Status | Cause | Body |
+|---|---|---|
+| `500` | Unexpected server/DB error | `{ "success": false, "message": "Failed to retrieve unique customers list", "error": "<error message>" }` |

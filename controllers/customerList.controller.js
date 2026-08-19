@@ -1,4 +1,4 @@
-import { fetchGlobalUniqueCustomersService } from '../services/customerlist.service.js';
+import { fetchGlobalUniqueCustomersService } from '../services/customerList.service.js';
 
 /**
  * Controller to handle fetching all unique customers for the main portal

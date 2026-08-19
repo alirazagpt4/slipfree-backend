@@ -29,6 +29,7 @@ Routes are mounted in `app/app.js`:
 | `/api/v1/receipts` | `invoice.routes.js`, `feedback.routes.js` | `POST /ingest` only (API key) |
 | `/api/v1/admin` | `admin.routes.js` | JWT, except `/login` |
 | `/api/v1` (i.e. `/api/v1/segments`) | `customerSegment.routes.js` | none |
+| `/api/v1/customers` (i.e. `/api/v1/customers/customers-list`) | `customerList.routes.js` | none |
 
 ## Two invoice-creation entry points
 
@@ -48,6 +49,7 @@ Both paths inherit the same idempotency and transactional behavior described bel
 - **WhatsApp receipt dispatch**: `services/whatsapp.service.js` sends the receipt link via the Ginkgo Retail WhatsApp API whenever an invoice is created with a customer phone number, from either entry point. This is non-blocking / best-effort — errors are logged and never surfaced to the caller or the POS terminal.
 - **Admin invoice listing**: `GET /api/v1/admin/invoices` (JWT-protected) returns every invoice with its items and feedback eager-loaded, for internal review — there's no filtering/pagination.
 - **Customer segments**: a lightweight, unauthenticated feature (`customerSegment.*`) for saving a named list of customers (with optional `filter_criteria`) as a single JSON blob per segment — not linked to invoices or any other table.
+- **Global customer list**: `GET /api/v1/customers/customers-list` (`customerList.*`) dedupes customers across every saved `CustomerSegment.customer_list` by phone number (first occurrence wins), returning one flat array with `phone`/`name`/`last_feedback` per customer. Read-only, unauthenticated; does not touch any table other than `customer_segments`.
 - **Auth model**: two independent mechanisms, neither shared:
   - POS ingest: a static shared secret (`POS_API_KEY`) compared against the `X-API-KEY` request header.
   - Admin routes (except `/login`): a JWT issued by `POST /api/v1/admin/login` (credentials checked against `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH`), verified against `JWT_SECRET`.

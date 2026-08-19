@@ -18,6 +18,7 @@ Stack: Node.js (ESM), Express 5, Sequelize (MySQL), `node-cron`, `oracledb` (for
 | WhatsApp receipt delivery | fired automatically after invoice creation | n/a | [architecture.md](architecture.md) |
 | Admin login & invoice review | `POST /api/v1/admin/login`, `GET /api/v1/admin/invoices` | JWT | [api.md](api.md) |
 | Customer segments | `POST /api/v1/segments`, `GET /api/v1/segments` | none | [api.md](api.md) |
+| Global customer list | `GET /api/v1/customers/customers-list` | none | [api.md](api.md), [architecture.md](architecture.md) |
 | React SPA hosting | any non-`/api` path → `public/index.html` | n/a | — |
 
 ## Data flow
@@ -36,6 +37,7 @@ Admin ──POST /login──> JWT
 Admin ──GET /invoices (JWT)──> MySQL (all invoices + items + feedback)
 
 Marketer ──POST/GET /segments──> MySQL (customer_segments)
+Portal ──GET /customers/customers-list──> MySQL (customer_segments, deduped by phone)
 ```
 
 ## Layering (core receipt pipeline)
