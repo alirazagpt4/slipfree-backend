@@ -128,7 +128,7 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
         const groupedDocumentsMap = rawRows.reduce((acc, row) => {
             const docSid = row.DOC_SID;
 
-            console.log("row of doc", row);
+            // console.log("row of doc", row);
 
             // 🔍 EXACT TAX VALUE PRINT (Bina kisi Rounding / Modification ke)
             //console.log(`Receipt #${row['Receipt No']} | Item: ${row['Product Name']} | Exact Tax:`, row['Tax'], `| Type: ${typeof row['Tax']}`);

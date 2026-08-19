@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import oracledb from 'oracledb';
-import { formatPakistaniPhoneNumber } from '../utils/numberFormatter.js';
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
@@ -15,48 +14,38 @@ const MASTER_CUSTOMER_QUERY = `
         ss.sbs_name AS SBS_NAME,
         s.store_name AS SHOP, 
         TO_CHAR(d.created_datetime, 'DD-MON-YYYY HH24:MI:SS') AS CUSTOMER_CREATED_DATETIME,
-        NVL(NULLIF(TRIM(NVL(TO_CHAR(d.first_name), '') || ' ' || NVL(TO_CHAR(d.last_name), '')), ''), 'N/A') AS CUSTOMER_NAME, 
+        NVL(NULLIF(TRIM(NVL(TO_CHAR(d.first_name), '') || ' ' || NVL(TO_CHAR(d.LAST_NAME), '')), ''), 'N/A') AS CUSTOMER_NAME, 
         NVL(
             NULLIF(
                 TRIM(
-                    NVL(TO_CHAR(ca.address_1), '') || ' ' ||
-                    NVL(TO_CHAR(ca.address_2), '') || ' ' ||
-                    NVL(TO_CHAR(ca.address_3), '')
+                    NVL(TO_CHAR(ca.ADDRESS_1), '') || ' ' ||
+                    NVL(TO_CHAR(ca.ADDRESS_2), '') || ' ' ||
+                    NVL(TO_CHAR(ca.ADDRESS_3), '')
                 ), ''
             ),
             'N/A'
         ) AS CUSTOMER_ADDRESS,
         NVL(p.phone_no, 'N/A') AS MOBILE_NO,
-        NVL(ce.email_address, 'N/A') AS EMAIL_ADDRESS
+        NVL(ce.EMAIL_ADDRESS, 'N/A') AS EMAIL_ADDRESS
     FROM rps.customer d 
-    LEFT JOIN (
-        SELECT cust_sid, phone_no,
-               ROW_NUMBER() OVER (PARTITION BY cust_sid ORDER BY sid DESC) as rn
-        FROM rps.customer_phone
-    ) p ON d.sid = p.cust_sid AND p.rn = 1
-    LEFT JOIN (
-        SELECT cust_sid, address_1, address_2, address_3,
-               ROW_NUMBER() OVER (PARTITION BY cust_sid ORDER BY sid DESC) as rn
-        FROM rps.customer_address
-    ) ca ON d.sid = ca.cust_sid AND ca.rn = 1
-    LEFT JOIN (
-        SELECT cust_sid, email_address,
-               ROW_NUMBER() OVER (PARTITION BY cust_sid ORDER BY sid DESC) as rn
-        FROM rps.customer_email
-    ) ce ON d.sid = ce.cust_sid AND ce.rn = 1
+    LEFT JOIN rps.customer_phone p ON d.SID = p.CUST_SID
+    LEFT JOIN RPS.CUSTOMER_ADDRESS ca ON d.SID = ca.CUST_SID
+    LEFT JOIN RPS.CUSTOMER_EMAIL ce ON d.SID = ce.CUST_SID
     INNER JOIN rps.store s ON d.store_sid = s.sid AND d.sbs_sid = s.sbs_sid 
     INNER JOIN rps.subsidiary ss ON ss.sid = d.sbs_sid
     WHERE 1=1
-    ORDER BY d.created_datetime DESC
 `;
 
 export const fetchMasterCustomers = async () => {
     let connection;
+    console.time('⏱️ Oracle Fetch Master Execution Time');
 
     try {
+        console.log('🔌 Connecting to Oracle Database...');
         connection = await oracledb.getConnection(oracleConfig);
+        console.log('✅ Oracle Connected Successfully!');
 
-        // Fetch Array Size memory throughput optimize karta hai
+        console.log('🔄 Executing Master Customer Query...');
         const result = await connection.execute(
             MASTER_CUSTOMER_QUERY,
             [],
@@ -64,15 +53,13 @@ export const fetchMasterCustomers = async () => {
         );
 
         const rows = result.rows || [];
+        console.log(`📊 Raw Rows Fetched from DB: ${rows.length}`);
+
         const uniqueCustomersMap = new Map();
 
-        // O(N) Deduplication
         for (const item of rows) {
-            const rawPhone = String(item.MOBILE_NO || '').trim();
-            const cleanPhone = formatPakistaniPhoneNumber(rawPhone);
-
-            // Key selection based on Phone OR Name fallback
-            const mapKey = cleanPhone !== null ? cleanPhone : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
+            const cleanPhone = String(item.MOBILE_NO || '').trim() || 'N/A';
+            const mapKey = cleanPhone !== 'N/A' ? cleanPhone : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
 
             if (!uniqueCustomersMap.has(mapKey)) {
                 uniqueCustomersMap.set(mapKey, {
@@ -83,20 +70,27 @@ export const fetchMasterCustomers = async () => {
                     shop: item.SHOP || 'N/A',
                     sbs_name: item.SBS_NAME || 'N/A',
                     created_at: item.CUSTOMER_CREATED_DATETIME || null,
-                    last_feedback: 'None' // Front-end contract consistency
+                    last_feedback: 'None'
                 });
             }
         }
 
-        return Array.from(uniqueCustomersMap.values());
+        const finalData = Array.from(uniqueCustomersMap.values());
+
+        console.log(`✨ Total Unique Records After Map Deduplication: ${finalData.length}`);
+        console.log('🔍 First Sample Output Record:', finalData[0] || 'No records returned');
+
+        return finalData;
 
     } catch (error) {
         console.error('❌ Oracle Fetch Error:', error.message);
-        throw error;
+        return [];
     } finally {
+        console.timeEnd('⏱️ Oracle Fetch Master Execution Time');
         if (connection) {
             try {
                 await connection.close();
+                console.log('🔌 Oracle Connection Closed.');
             } catch (closeErr) {
                 console.error('Error closing Oracle connection:', closeErr.message);
             }
