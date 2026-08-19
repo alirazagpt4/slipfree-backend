@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import oracledb from 'oracledb';
-import { formatPakistaniPhoneNumber } from '../utils/numberFormatter.js';
+// import { formatPakistaniPhoneNumber } from '../utils/numberFormatter.js';
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
@@ -64,15 +64,16 @@ export const fetchMasterCustomers = async () => {
         );
 
         const rows = result.rows || [];
+        console.log("Rows: ", rows);
         const uniqueCustomersMap = new Map();
 
         // O(N) Deduplication
         for (const item of rows) {
             const rawPhone = String(item.MOBILE_NO || '').trim();
-            const cleanPhone = formatPakistaniPhoneNumber(rawPhone);
+            const cleanPhone = rawPhone !== '' ? rawPhone : 'N/A';
 
             // Key selection based on Phone OR Name fallback
-            const mapKey = cleanPhone !== null ? cleanPhone : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
+            const mapKey = cleanPhone !== 'N/A' ? cleanPhone : `${item.CUSTOMER_NAME}_${item.CUSTOMER_CREATED_DATETIME}`;
 
             if (!uniqueCustomersMap.has(mapKey)) {
                 uniqueCustomersMap.set(mapKey, {
@@ -83,7 +84,7 @@ export const fetchMasterCustomers = async () => {
                     shop: item.SHOP || 'N/A',
                     sbs_name: item.SBS_NAME || 'N/A',
                     created_at: item.CUSTOMER_CREATED_DATETIME || null,
-                    last_feedback: 'None' // Front-end contract consistency
+
                 });
             }
         }

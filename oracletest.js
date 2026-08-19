@@ -1,4 +1,4 @@
-import { fetchMasterCustomers } from './services/masterCustomers.service.js';
+import { fetchMasterCustomers } from './services/customerlist.service.js';
 
 (async () => {
     console.log('🚀 Starting Test Call for Master Customers...');
