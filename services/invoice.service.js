@@ -60,7 +60,7 @@ async function createInvoice(data) {
             // Support payload schema from posSync mapped output
             const qty = safeNum(item.qty) || 1;
             const unitPrice = safeNum(item.price);
-            const gstTax = safeNum(item.tax);
+            // const gstTax = safeNum(item.tax);
             const itemTotal = item.price * item.qty;
 
             // Derived tax percentage calculation safely falling back to 0
