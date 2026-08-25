@@ -67,6 +67,15 @@ const Invoice = sequelize.define('Invoice', {
         type: DataTypes.STRING(100), // ENUM hata kar STRING(100) lagao
         allowNull: false,
         defaultValue: 'Cash'
+    },
+    sbs_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    currency: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: 'RS'
     }
 }, {
     tableName: 'invoices',

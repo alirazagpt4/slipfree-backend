@@ -30,6 +30,13 @@ async function createInvoice(data) {
         };
     }
 
+
+    // 🛑 Currency Auto-Resolution (Agar payload me direct currency na ho to sbsName se auto infer kare)
+    const rawSbs = (data.sbsName || '').toUpperCase();
+    const resolvedCurrency = data.currency
+        ? data.currency
+        : (rawSbs.includes('UAE') || rawSbs.includes('DUBAI') || rawSbs.includes('DIRHAM')) ? 'Dh' : 'RS';
+
     // 2. Managed ACID Transaction
     const invoice = await sequelize.transaction(async (t) => {
         const receiptHash = generateReceiptHash();
@@ -52,7 +59,9 @@ async function createInvoice(data) {
             gst_amount: safeNum(data.summary?.gst),
             pos_fee: safeNum(data.summary?.posFee),
             payable_amount: safeNum(data.summary?.payable),
-            payment_mode: data.paymentMode || 'Cash'
+            payment_mode: data.paymentMode || 'Cash',
+            sbs_name: data.sbsName || null,
+            currency: resolvedCurrency
         }, { transaction: t });
 
         // 3. Mapping Payload (Fixed key mismatch bug)

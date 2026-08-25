@@ -19,6 +19,7 @@ const DELTA_SALES_QUERY = `
 SELECT * FROM (
     SELECT 
         t.store_no as "Store No",
+        t.sbs_name as "SBS Name",
         t.Shop as "Shop Name", 
         t.store_address as "Store Address",
         t.cashier_login_name as "Cashier Personnal",
@@ -128,7 +129,7 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
         const groupedDocumentsMap = rawRows.reduce((acc, row) => {
             const docSid = row.DOC_SID;
 
-            // console.log("row of doc", row);
+            console.log("row of doc", row);
 
             // 🔍 EXACT TAX VALUE PRINT (Bina kisi Rounding / Modification ke)
             //console.log(`Receipt #${row['Receipt No']} | Item: ${row['Product Name']} | Exact Tax:`, row['Tax'], `| Type: ${typeof row['Tax']}`);
@@ -138,6 +139,7 @@ export async function fetchNewSalesFromRetailPro(sinceDate, storeNo = null) {
                     document: {
                         DOC_SID: row.DOC_SID,
                         StoreNo: row['Store No'],
+                        SBSName: row['SBS Name'],
                         ShopName: row['Shop Name'],
                         ShopAddress: row['Store Address'],       // NAYA
                         CashierName: row['Cashier Personnal'],   // NAYA
@@ -225,6 +227,7 @@ export function mapRetailProSaleToOurFormat(saleGroup) {
     const formattedPayload = {
         storeId: doc.StoreNo || 3,
         shopName: doc.ShopName || null,
+        sbsName: doc.SBSName || null,
         shopAddress: doc.ShopAddress !== 'N/A' ? doc.ShopAddress : null,
         cashierName: doc.CashierName || null,
         invoiceNo: `${doc.ReceiptNo}`,
