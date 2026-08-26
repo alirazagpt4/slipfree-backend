@@ -41,7 +41,17 @@ async function ingestInvoice(req, res) {
             receiptUrl: result.receiptUrl
         });
     } catch (error) {
-        console.error('Ingest error:', error.message);
+        // Detailed Sequelize validation logging
+        if (error.errors && Array.isArray(error.errors)) {
+            console.error('❌ DB VALIDATION BREAKDOWN:', error.errors.map(e => ({
+                field: e.path,
+                message: e.message,
+                value: e.value
+            })));
+        } else {
+            console.error('Ingest error:', error);
+        }
+
         return res.status(500).json({ success: false, error: 'Internal server error' });
     }
 }
