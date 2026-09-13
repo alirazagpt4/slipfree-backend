@@ -9,7 +9,7 @@ const Invoice = sequelize.define('Invoice', {
     },
     invoice_no: {
         type: DataTypes.STRING(50),
-        unique: true,
+        unique: false,
         allowNull: false
     },
     fbr_invoice_no: {

@@ -4,7 +4,7 @@ import { generateReceiptHash } from '../utils/hash.js';
 import { sendReceiptWhatsApp } from './whatsapp.service.js';
 
 function buildReceiptUrl(hash) {
-    const base = process.env.RECEIPT_BASE_URL || 'https://greenslip.averonsol.com/v';
+    const base = process.env.RECEIPT_BASE_URL || 'https://slip.nexonsys.com/v';
     return `${base}/${hash}`;
 }
 
